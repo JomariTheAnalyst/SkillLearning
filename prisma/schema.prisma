@@ -1,0 +1,743 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String               @id @default(cuid())
+  name               String?
+  email              String               @unique
+  emailVerified      DateTime?
+  password           String?
+  image              String?
+  role               Role                 @default(USER)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  accounts           Account[]
+  completedQuizzes   CompletedQuiz[]
+  enrollments        Enrollment[]
+  leaderboardEntries LeaderboardEntry[]
+  streaks            LearningStreak?
+  onboardingStatus   OnboardingStatus?
+  progress           Progress[]
+  quizAttempts       QuizAttempt[]
+  sessions           Session[]
+  socialProfile      SocialProfile?
+  surveyResponses    SurveyResponse[]
+  achievements       UserAchievement[]
+  challenges         UserChallenge[]
+  dailyChallenges    UserDailyChallenge[]
+  experience         UserExperience?
+  level              UserLevel?
+  profile            UserProfile?
+  userSkills         UserSkill[]
+  weeklyGoals        UserWeeklyGoal[]
+
+  @@map("users")
+}
+
+model UserExperience {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  totalXp        Int      @default(0)
+  currentLevelXp Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_experience")
+}
+
+model UserLevel {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  level     Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_levels")
+}
+
+model SkillTree {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  category    Category
+  imageUrl    String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  nodes       SkillNode[]
+
+  @@map("skill_trees")
+}
+
+model SkillNode {
+  id            String      @id @default(cuid())
+  name          String
+  description   String?
+  skillTreeId   String
+  parentId      String?
+  xpRequired    Int         @default(0)
+  levelRequired Int         @default(1)
+  imageUrl      String?
+  position      Json
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  parent        SkillNode?  @relation("NodeHierarchy", fields: [parentId], references: [id])
+  children      SkillNode[] @relation("NodeHierarchy")
+  skillTree     SkillTree   @relation(fields: [skillTreeId], references: [id], onDelete: Cascade)
+  userSkills    UserSkill[]
+
+  @@index([parentId], map: "skill_nodes_parentId_fkey")
+  @@index([skillTreeId], map: "skill_nodes_skillTreeId_fkey")
+  @@map("skill_nodes")
+}
+
+model UserSkill {
+  id          String    @id @default(cuid())
+  userId      String
+  skillNodeId String
+  isUnlocked  Boolean   @default(false)
+  progress    Int       @default(0)
+  unlockedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  skillNode   SkillNode @relation(fields: [skillNodeId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, skillNodeId])
+  @@index([skillNodeId], map: "user_skills_skillNodeId_fkey")
+  @@map("user_skills")
+}
+
+model Challenge {
+  id             String          @id @default(cuid())
+  title          String
+  description    String
+  type           ChallengeType
+  difficulty     Difficulty
+  xpReward       Int
+  requirements   Json
+  badgeUrl       String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  userChallenges UserChallenge[]
+
+  @@map("challenges")
+}
+
+model UserChallenge {
+  id          String    @id @default(cuid())
+  userId      String
+  challengeId String
+  progress    Int       @default(0)
+  isCompleted Boolean   @default(false)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  challenge   Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, challengeId])
+  @@index([challengeId], map: "user_challenges_challengeId_fkey")
+  @@map("user_challenges")
+}
+
+model DailyChallenge {
+  id             String               @id @default(cuid())
+  title          String
+  description    String
+  xpReward       Int
+  requirements   Json
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  userChallenges UserDailyChallenge[]
+
+  @@map("daily_challenges")
+}
+
+model UserDailyChallenge {
+  id               String         @id @default(cuid())
+  userId           String
+  dailyChallengeId String
+  date             DateTime       @default(now())
+  isCompleted      Boolean        @default(false)
+  completedAt      DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  dailyChallenge   DailyChallenge @relation(fields: [dailyChallengeId], references: [id], onDelete: Cascade)
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dailyChallengeId, date])
+  @@index([dailyChallengeId], map: "user_daily_challenges_dailyChallengeId_fkey")
+  @@map("user_daily_challenges")
+}
+
+model WeeklyGoal {
+  id           String           @id @default(cuid())
+  title        String
+  description  String
+  xpReward     Int
+  requirements Json
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  userGoals    UserWeeklyGoal[]
+
+  @@map("weekly_goals")
+}
+
+model UserWeeklyGoal {
+  id            String     @id @default(cuid())
+  userId        String
+  weeklyGoalId  String
+  weekStartDate DateTime
+  progress      Int        @default(0)
+  isCompleted   Boolean    @default(false)
+  completedAt   DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weeklyGoal    WeeklyGoal @relation(fields: [weeklyGoalId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, weeklyGoalId, weekStartDate])
+  @@index([weeklyGoalId], map: "user_weekly_goals_weeklyGoalId_fkey")
+  @@map("user_weekly_goals")
+}
+
+model Leaderboard {
+  id          String             @id @default(cuid())
+  name        String
+  description String?
+  type        LeaderboardType
+  resetPeriod ResetPeriod?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  entries     LeaderboardEntry[]
+
+  @@map("leaderboards")
+}
+
+model LeaderboardEntry {
+  id            String      @id @default(cuid())
+  leaderboardId String
+  userId        String
+  score         Int         @default(0)
+  rank          Int?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  leaderboard   Leaderboard @relation(fields: [leaderboardId], references: [id], onDelete: Cascade)
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([leaderboardId, userId])
+  @@index([userId], map: "leaderboard_entries_userId_fkey")
+  @@map("leaderboard_entries")
+}
+
+model SocialProfile {
+  id          String       @id @default(cuid())
+  userId      String       @unique
+  bio         String?
+  socialLinks Json?
+  privacy     PrivacyLevel @default(PUBLIC)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("social_profiles")
+}
+
+model UserProfile {
+  id               String         @id @default(cuid())
+  userId           String         @unique
+  age              Int?
+  educationLevel   String?
+  profession       String?
+  careerGoals      String?
+  learningStyle    LearningStyle?
+  timeAvailability String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+model OnboardingStatus {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  isCompleted Boolean  @default(false)
+  currentStep Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("onboarding_status")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId], map: "accounts_userId_fkey")
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "sessions_userId_fkey")
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model Survey {
+  id          String           @id @default(cuid())
+  title       String
+  description String?
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  questions   SurveyQuestion[]
+  responses   SurveyResponse[]
+
+  @@map("surveys")
+}
+
+model SurveyQuestion {
+  id         String         @id @default(cuid())
+  surveyId   String
+  text       String
+  type       QuestionType
+  order      Int
+  isRequired Boolean        @default(false)
+  options    String?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  answers    SurveyAnswer[]
+  survey     Survey         @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+
+  @@index([surveyId], map: "survey_questions_surveyId_fkey")
+  @@map("survey_questions")
+}
+
+model SurveyResponse {
+  id          String         @id @default(cuid())
+  userId      String
+  surveyId    String
+  completedAt DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  answers     SurveyAnswer[]
+  survey      Survey         @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, surveyId])
+  @@index([surveyId], map: "survey_responses_surveyId_fkey")
+  @@map("survey_responses")
+}
+
+model SurveyAnswer {
+  id               String         @id @default(cuid())
+  surveyResponseId String
+  questionId       String
+  answer           String
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  question         SurveyQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  response         SurveyResponse @relation(fields: [surveyResponseId], references: [id], onDelete: Cascade)
+
+  @@unique([surveyResponseId, questionId])
+  @@index([questionId], map: "survey_answers_questionId_fkey")
+  @@map("survey_answers")
+}
+
+model Course {
+  id          String       @id @default(cuid())
+  title       String
+  description String?
+  imageUrl    String?
+  price       Float?
+  level       Level        @default(BEGINNER)
+  category    Category
+  duration    Int?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  enrollments Enrollment[]
+  modules     Module[]
+
+  @@map("courses")
+}
+
+model Module {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  order       Int
+  courseId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  lessons     Lesson[]
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([courseId], map: "modules_courseId_fkey")
+  @@map("modules")
+}
+
+model Lesson {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  content     String
+  order       Int
+  moduleId    String
+  duration    Int?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  module      Module     @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  progress    Progress[]
+  quizzes     Quiz[]
+
+  @@index([moduleId], map: "lessons_moduleId_fkey")
+  @@map("lessons")
+}
+
+model Quiz {
+  id               String          @id @default(cuid())
+  title            String
+  description      String?
+  lessonId         String
+  passingScore     Int             @default(70)
+  timeLimit        Int?
+  isAdaptive       Boolean         @default(false)
+  quizType         QuizType        @default(PRACTICE)
+  difficulty       Difficulty      @default(MEDIUM)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  completedQuizzes CompletedQuiz[]
+  questions        Question[]
+  quizAttempts     QuizAttempt[]
+  lesson           Lesson          @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([lessonId], map: "quizzes_lessonId_fkey")
+  @@map("quizzes")
+}
+
+model Question {
+  id              String             @id @default(cuid())
+  text            String
+  questionType    QuestionType       @default(MULTIPLE_CHOICE)
+  difficultyLevel Difficulty         @default(MEDIUM)
+  points          Int                @default(1)
+  quizId          String
+  explanation     String?
+  codeSnippet     String?
+  hints           String?
+  order           Int                @default(0)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  answers         AnswerSubmission[]
+  dragDropItems   DragDropItem[]
+  options         Option[]
+  quiz            Quiz               @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@index([quizId], map: "questions_quizId_fkey")
+  @@map("questions")
+}
+
+model Option {
+  id          String   @id @default(cuid())
+  text        String
+  isCorrect   Boolean
+  questionId  String
+  explanation String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  question    Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId], map: "options_questionId_fkey")
+  @@map("options")
+}
+
+model DragDropItem {
+  id          String   @id @default(cuid())
+  content     String
+  correctZone String
+  questionId  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  question    Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId], map: "drag_drop_items_questionId_fkey")
+  @@map("drag_drop_items")
+}
+
+model QuizAttempt {
+  id          String             @id @default(cuid())
+  userId      String
+  quizId      String
+  startedAt   DateTime           @default(now())
+  completedAt DateTime?
+  score       Float?
+  timeTaken   Int?
+  status      AttemptStatus      @default(IN_PROGRESS)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  answers     AnswerSubmission[]
+  quiz        Quiz               @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([quizId], map: "quiz_attempts_quizId_fkey")
+  @@index([userId], map: "quiz_attempts_userId_fkey")
+  @@map("quiz_attempts")
+}
+
+model AnswerSubmission {
+  id            String      @id @default(cuid())
+  quizAttemptId String
+  questionId    String
+  answer        String
+  isCorrect     Boolean     @default(false)
+  pointsEarned  Float       @default(0)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  question      Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  quizAttempt   QuizAttempt @relation(fields: [quizAttemptId], references: [id], onDelete: Cascade)
+
+  @@unique([quizAttemptId, questionId])
+  @@index([questionId], map: "answer_submissions_questionId_fkey")
+  @@map("answer_submissions")
+}
+
+model LearningStreak {
+  id               String    @id @default(cuid())
+  userId           String    @unique
+  currentStreak    Int       @default(0)
+  longestStreak    Int       @default(0)
+  lastActivityDate DateTime?
+  streakStartDate  DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("learning_streaks")
+}
+
+model Achievement {
+  id               String            @id @default(cuid())
+  title            String
+  description      String
+  badge            String
+  requirementType  RequirementType
+  requirementValue Int
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  userAchievements UserAchievement[]
+
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String      @id @default(cuid())
+  userId        String
+  achievementId String
+  earnedAt      DateTime    @default(now())
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@index([achievementId], map: "user_achievements_achievementId_fkey")
+  @@map("user_achievements")
+}
+
+model Enrollment {
+  id          String           @id @default(cuid())
+  userId      String
+  courseId    String
+  enrolledAt  DateTime         @default(now())
+  status      EnrollmentStatus @default(ACTIVE)
+  completedAt DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  course      Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@index([courseId], map: "enrollments_courseId_fkey")
+  @@map("enrollments")
+}
+
+model Progress {
+  id           String    @id @default(cuid())
+  userId       String
+  lessonId     String
+  completed    Boolean   @default(false)
+  completedAt  DateTime?
+  lastAccessed DateTime  @default(now())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  lesson       Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@index([lessonId], map: "progress_lessonId_fkey")
+  @@map("progress")
+}
+
+model CompletedQuiz {
+  id          String   @id @default(cuid())
+  userId      String
+  quizId      String
+  score       Float
+  completedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  quiz        Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, quizId])
+  @@index([quizId], map: "completed_quizzes_quizId_fkey")
+  @@map("completed_quizzes")
+}
+
+enum Role {
+  USER
+  ADMIN
+  INSTRUCTOR
+}
+
+enum Level {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+enum Category {
+  PROGRAMMING
+  DATA_SCIENCE
+  WEB_DEVELOPMENT
+  MOBILE_DEVELOPMENT
+  DEVOPS
+  CYBERSECURITY
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  PAUSED
+  CANCELLED
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  SINGLE_CHOICE
+  TRUE_FALSE
+  FILL_IN_BLANK
+  CODE_COMPLETION
+  DRAG_DROP
+  OPEN_ENDED
+  CODE_CHALLENGE
+  MATCH_PAIRS
+}
+
+enum LearningStyle {
+  VISUAL
+  AUDITORY
+  READING
+  KINESTHETIC
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+  EXPERT
+}
+
+enum QuizType {
+  PRACTICE
+  CHAPTER_ASSESSMENT
+  FINAL_EVALUATION
+  TIMED_CHALLENGE
+  ADAPTIVE
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+  FAILED
+  PASSED
+}
+
+enum RequirementType {
+  QUIZ_COMPLETION
+  COURSE_COMPLETION
+  STREAK_DAYS
+  CORRECT_ANSWERS
+  POINTS_EARNED
+  LESSONS_COMPLETED
+}
+
+enum ChallengeType {
+  QUIZ_SCORE
+  COURSE_COMPLETION
+  STREAK
+  SKILL_MASTERY
+  COMMUNITY_CONTRIBUTION
+  SPECIAL_EVENT
+}
+
+enum LeaderboardType {
+  XP_TOTAL
+  STREAK
+  COURSE_COMPLETION
+  QUIZ_SCORE
+  CHALLENGE_COMPLETION
+}
+
+enum ResetPeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
+  SEASONAL
+  YEARLY
+  NEVER
+}
+
+enum PrivacyLevel {
+  PUBLIC
+  FRIENDS_ONLY
+  PRIVATE
+}
