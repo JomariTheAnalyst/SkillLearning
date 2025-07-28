@@ -26,25 +26,51 @@ interface Course {
 
 // Component to display a single course card with animations
 const CourseCard = ({ course }: { course: Course }) => {
+  const isAIPowered = course.tags.includes('AI-Powered');
+  const getCourseLinkPath = (course: Course) => {
+    if (isAIPowered) {
+      return `/courses/${course.category.toLowerCase()}/${course.id}`;
+    }
+    return `/courses/${course.category.toLowerCase()}/${course.id}`;
+  };
+
   return (
     <motion.div 
-      className="bg-card border rounded-xl overflow-hidden card-3d shadow-sm hover:shadow-md transition-all"
+      className={`bg-card border rounded-xl overflow-hidden card-3d shadow-sm hover:shadow-md transition-all ${
+        isAIPowered ? 'border-gradient-to-r from-blue-500 to-purple-500 border-2' : ''
+      }`}
       whileHover={{ y: -5 }}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="aspect-video relative bg-gradient-to-tr from-primary/10 to-primary/30">
+      <div className={`aspect-video relative ${
+        isAIPowered 
+          ? 'bg-gradient-to-tr from-blue-500/20 to-purple-500/20' 
+          : 'bg-gradient-to-tr from-primary/10 to-primary/30'
+      }`}>
         {course.imageUrl ? (
           <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${course.imageUrl})` }} />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-2xl text-primary/40 font-semibold">{course.category}</span>
+            {isAIPowered ? (
+              <div className="text-center">
+                <div className="text-3xl mb-2">🤖</div>
+                <span className="text-lg font-semibold text-blue-600 dark:text-blue-400">AI-Powered</span>
+              </div>
+            ) : (
+              <span className="text-2xl text-primary/40 font-semibold">{course.category}</span>
+            )}
           </div>
         )}
         <div className="absolute top-2 right-2 px-2 py-1 bg-black/40 text-white text-xs rounded-full backdrop-blur-sm">
           {course.level}
         </div>
+        {isAIPowered && (
+          <div className="absolute top-2 left-2 px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs rounded-full font-medium">
+            🚀 AI-Enhanced
+          </div>
+        )}
       </div>
 
       <div className="p-5 space-y-4">
@@ -71,15 +97,19 @@ const CourseCard = ({ course }: { course: Course }) => {
         </div>
         
         <Link 
-          href={`/courses/${course.category.toLowerCase()}/${course.id}`}
+          href={getCourseLinkPath(course)}
           className="block w-full mt-4"
         >
           <motion.button 
-            className="w-full py-2 bg-primary text-primary-foreground rounded-md font-medium"
+            className={`w-full py-2 rounded-md font-medium ${
+              isAIPowered 
+                ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:from-blue-600 hover:to-purple-600' 
+                : 'bg-primary text-primary-foreground hover:bg-primary/90'
+            }`}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
-            View Course
+            {isAIPowered ? '🚀 Begin AI Lesson' : 'View Course'}
           </motion.button>
         </Link>
       </div>
@@ -89,6 +119,18 @@ const CourseCard = ({ course }: { course: Course }) => {
 
 // Mock data for courses
 const MOCK_COURSES: Course[] = [
+  {
+    id: "select-statements",
+    title: "Mastering SQL SELECT Statements",
+    description: "AI-powered lesson that adapts to your learning style. Learn to retrieve and filter data from databases with personalized practice exercises.",
+    level: "BEGINNER",
+    category: "SQL",
+    duration: 45, // 45 minutes
+    tags: ["AI-Powered", "Databases", "Interactive"],
+    rating: 4.9,
+    studentsCount: 85,
+    updatedAt: "2024-01-15",
+  },
   {
     id: "sql-fundamentals",
     title: "SQL Fundamentals",
@@ -114,6 +156,18 @@ const MOCK_COURSES: Course[] = [
     updatedAt: "2023-11-20",
   },
   {
+    id: "functions",
+    title: "Python Functions Mastery",
+    description: "AI-enhanced lesson for creating reusable code with Python functions. Personalized examples and practice exercises tailored to your programming experience.",
+    level: "INTERMEDIATE",
+    category: "PYTHON",
+    duration: 60, // 60 minutes
+    tags: ["AI-Powered", "Programming", "Interactive"],
+    rating: 4.8,
+    studentsCount: 142,
+    updatedAt: "2024-01-20",
+  },
+  {
     id: "python-basics",
     title: "Python Programming Basics",
     description: "Start your Python journey with this comprehensive introduction to Python syntax, data types, and core programming concepts.",
@@ -136,6 +190,18 @@ const MOCK_COURSES: Course[] = [
     rating: 4.9,
     studentsCount: 1800,
     updatedAt: "2024-01-10",
+  },
+  {
+    id: "formulas",
+    title: "Excel Formulas & Functions Mastery",
+    description: "AI-powered Excel lesson that adapts to your skill level. Master formulas and functions with real-world spreadsheet scenarios and interactive practice.",
+    level: "BEGINNER",
+    category: "EXCEL",
+    duration: 50, // 50 minutes
+    tags: ["AI-Powered", "Formulas", "Interactive"],
+    rating: 4.9,
+    studentsCount: 76,
+    updatedAt: "2024-01-18",
   },
   {
     id: "excel-essentials",
@@ -288,6 +354,45 @@ export default function CourseCatalog() {
         <p className="text-xl text-muted-foreground max-w-2xl">
           Discover our curated collection of courses designed to help you master essential technical skills for your career advancement.
         </p>
+      </motion.div>
+
+      {/* Featured AI-Powered Lessons */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
+        className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-8 mb-8"
+      >
+        <div className="text-center mb-6">
+          <h2 className="text-2xl font-bold mb-2 flex items-center justify-center gap-2">
+            🤖 AI-Powered Learning Experience
+          </h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto">
+            Try our revolutionary AI-powered lessons that adapt to your learning style and provide personalized practice exercises
+          </p>
+        </div>
+        
+        <div className="grid md:grid-cols-3 gap-6">
+          {MOCK_COURSES.filter(course => course.tags.includes('AI-Powered')).map((course) => (
+            <div key={course.id} className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg flex items-center justify-center text-sm font-bold">
+                  {course.category.charAt(0)}
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm">{course.title}</h3>
+                  <p className="text-xs text-muted-foreground">{course.duration} min • {course.level}</p>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{course.description}</p>
+              <Link href={`/courses/${course.category.toLowerCase()}/${course.id}`}>
+                <button className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-2 px-4 rounded-lg text-sm font-medium hover:from-blue-600 hover:to-purple-600 transition-all">
+                  🚀 Try AI Lesson
+                </button>
+              </Link>
+            </div>
+          ))}
+        </div>
       </motion.div>
 
       {/* Search and filters */}
